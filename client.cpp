@@ -1,0 +1,134 @@
+#include "clientQ.h"
+
+client::client(QString remoteServername, QObject *parent) : // RW У КЛИЕНТА И У СЕРВЕРА // ПОПРОБОВАТЬ SELECT()/POLL()
+    QObject(parent){
+    qDebug()<< "from client construct";
+    m_serverName = remoteServername;
+    // pipec = new QFile(m_serverName);
+}
+
+client::~client() {
+    pipec->close();
+    delete pipec;
+    pipec = NULL;
+    close(fd);
+    // m_socket->abort();2
+    // delete m_socket;
+    // m_socket = NULL;
+}
+
+int client::clopening(){
+    char buff [512];
+    memcpy(buff,m_serverName.toLocal8Bit().data(),sizeof(m_serverName.toLocal8Bit()));
+    printf()<<buff;
+    fd = open(buff,O_RDONLY);                   // НЕНАХОД - ВЫЗЫВАЕМ ХЕЛПУ С АРГОМ 1
+    int fdsm = open("/mnt/disk_d/agentUni/data.bin",O_RDWR,0);//способ общения - shared memory
+    if(fdsm<0){
+        printf()<<"clop: fd for shmem isnt opened";
+    }
+    // bool b = pipec->open(fd,QIODeviceBase::ReadOnly);
+    if(fd<0){
+        printf()<<"clop: pipec isnt opened";
+    }
+    return fdsm;
+}
+
+typedef struct cpout{
+    double cpout;
+    double ttlkbph;
+    double fkbph;
+    double avl;
+}outs;
+
+int client::pipe_readReady(){
+    // qDebug()<<"from pipe_readReady";
+    // sleep(5);
+    // // pipec->waitForBytesWritten(1000);
+    // if (pipec->bytesAvailable() >(long long)sizeof(double) * 4){
+    //     qDebug()<<"pipec->bytesAvailable() < double*4";
+    //     QByteArray bytes = pipec->readAll();
+    //     m_message=QString::fromUtf8(bytes);
+    //     m_message.removeLast();
+    //     qDebug()<<"reading successsful m - "<< m_message;
+    //     emit serverResponse(m_message);
+    // }
+
+    // double d1;
+    // double d2;
+    // double d3;
+    // double d4;
+    // QDataStream in(pipec);
+    // qDebug()<<pipec->bytesAvailable();
+    // if(pipec->b
+    // qDebug()<<"from sendmsgtosrv";ytesAvailable()>=(long long)sizeof(double)*4){
+    //     qDebug()<<"there is enough bytes";
+    //     qDebug()<<in.device();
+    // }
+    // in>>d1>>d2>>d3>>d4;
+    // qDebug()<<d1;
+
+    int result = 1;
+    outs* o =(outs*) malloc(sizeof(*o));
+    if(o){
+        int rbytes = 0;
+        struct pollfd waiter = {.fd=fd,.events=POLLIN};
+        int p = poll(&waiter,1,10000);
+        if(p>0&& (waiter.revents&POLLIN)){
+            qDebug()<<"poll is done";
+            rbytes = read(fd,o,sizeof(*o));
+            if(rbytes<0){
+                qDebug()<<"p = "<<p<<"rbytes = "<< rbytes;
+                free(o);//??
+                result = 0;
+            }
+        }else{
+            qDebug()<<"error "<< errno;
+            result = 0;
+        }
+        qDebug()<<"p = "<<p<<"rbytes = "<<rbytes;
+        double* ob = &o->cpout;
+        int i = 0;
+        m_message = "";
+        for(;i<=3;ob++,i++){
+            m_message += QString::number(*ob)+ " ";
+            qDebug()<<""<<i<<" double - "<<*ob;
+        }
+        emit serverResponse(m_message);
+        free(o);//??
+    }
+    else{
+        result = 0;
+    }
+    return result;
+    // QByteArray data = pipec->read(8);
+    // double m = data.toDouble();
+    // // if(r<0){
+    // //     qDebug()<<"reading pipe error";
+    // // }
+    // qDebug()<<"mes - "<<m;
+}
+
+void client:: pipeWritting(char* buf){//в лупе добавить
+    int b = pipec->open(fd,QIODeviceBase::WriteOnly);
+    if(!b){
+        qDebug()<<"pipe writting error";
+        return;
+    }
+    pipec->write(buf,sizeof(buf));
+}
+void client::send_StopToServer(){
+    // qDebug()<<"from sendmsgtosrv";3
+    // m_socket->write("1");
+    // m_socket->flush();
+    // qDebug()<<"\"1\" has been writting";
+}
+QString client::Read(){
+    return m_message;
+}
+void client::pipe_error(QLocalSocket::LocalSocketError error){
+    qDebug() << "socket_error : " << error;
+}
+void client::pipe_disconnected() {
+
+}
+#endif

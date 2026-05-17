@@ -1,0 +1,5 @@
+*.o
+agentcl
+*.pro.user
+build
+*~
